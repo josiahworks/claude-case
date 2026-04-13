@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Case</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', 'Times New Roman', serif; background: #0f0f0e; min-height: 100vh; color: #e8e2d9; display: flex; flex-direction: column; }
+  .mono { font-family: 'Courier New', monospace; }
+
+  /* Header */
+  #app-header { border-bottom: 1px solid #2a2a28; padding: 32px 40px 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+  #app-header .eyebrow { font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 0.2em; color: #7a6f62; text-transform: uppercase; margin-bottom: 8px; }
+  #app-header h1 { font-size: 30px; font-weight: 400; line-height: 1.2; color: #f0ebe3; letter-spacing: -0.02em; }
+  #section-count { font-family: 'Courier New', monospace; font-size: 11px; color: #4a4540; letter-spacing: 0.1em; }
+
+  /* Nav */
+  #nav { display: flex; border-bottom: 1px solid #1e1e1c; overflow-x: auto; padding: 0 40px; }
+  #nav button { background: none; border: none; border-bottom: 2px solid transparent; color: #5a5550; font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; padding: 14px 20px 12px; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; }
+  #nav button.active { border-bottom-color: #c9a96e; color: #c9a96e; }
+
+  /* Content */
+  #content { flex: 1; padding: 48px 40px; max-width: 780px; }
+  .section-counter { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 0.2em; color: #c9a96e; text-transform: uppercase; margin-bottom: 16px; }
+  #content h2 { font-size: 38px; font-weight: 400; margin: 0 0 12px; line-height: 1.15; color: #f5f0e8; letter-spacing: -0.025em; }
+  .subtitle-line { font-family: 'Courier New', monospace; font-size: 12px; color: #7a6f62; letter-spacing: 0.08em; margin-bottom: 36px; line-height: 1.6; }
+  .divider-line { width: 48px; height: 1px; background: #c9a96e; margin-bottom: 36px; opacity: 0.6; }
+  .body-para { font-size: 17px; line-height: 1.85; color: #ccc5ba; margin-bottom: 24px; font-weight: 400; letter-spacing: 0.005em; }
+
+  /* Footer nav */
+  #footer-nav { border-top: 1px solid #1e1e1c; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; }
+  #footer-nav button { background: none; border: 1px solid #2a2a28; font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 0.15em; padding: 8px 16px; cursor: pointer; text-transform: uppercase; transition: color 0.2s, border-color 0.2s; }
+  #btn-prev { color: #7a6f62; }
+  #btn-next { color: #c9a96e; }
+  #btn-prev:disabled, #btn-next:disabled { color: #2a2a28; cursor: default; }
+  #dots { display: flex; gap: 8px; align-items: center; }
+  .dot { width: 6px; height: 6px; border-radius: 3px; background: #2a2a28; cursor: pointer; transition: all 0.3s ease; }
+  .dot.active { width: 24px; background: #c9a96e; }
+
+  /* Footer credit */
+  #footer-credit { border-top: 1px solid #1a1a18; padding: 14px 40px; text-align: center; }
+  #footer-credit p { font-family: 'Courier New', monospace; font-size: 9px; color: #3a3a38; letter-spacing: 0.08em; line-height: 1.7; }
+
+  /* Exec Summary */
+  .exec-row { display: grid; grid-template-columns: 140px 1fr; gap: 20px; padding: 16px 18px; border: 1px solid #2a2a28; border-radius: 4px; cursor: pointer; transition: border-color 0.2s, background 0.2s; margin-bottom: 10px; }
+  .exec-row:hover { border-color: rgba(201,169,110,0.25); background: rgba(201,169,110,0.03); }
+  .exec-row-label { display: flex; align-items: flex-start; gap: 10px; }
+  .exec-num { font-family: 'Courier New', monospace; font-size: 9px; color: #4a4540; padding-top: 3px; min-width: 20px; }
+  .exec-tag { font-family: 'Courier New', monospace; font-size: 9px; color: #c9a96e; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1.5; }
+  .exec-text { font-size: 14.5px; color: #b8b0a4; line-height: 1.7; }
+  .exec-hint { font-size: 14px; color: #5a5550; line-height: 1.7; margin-bottom: 8px; font-style: italic; }
+
+  /* Accordion (shared by arch + ROI) */
+  .accordion { border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+  .accordion-header { display: flex; align-items: center; gap: 16px; padding: 14px 18px; cursor: pointer; transition: background 0.2s; }
+  .accordion-chevron { font-family: 'Courier New', monospace; font-size: 10px; color: #3a3a38; transition: transform 0.2s; }
+  .accordion-body { padding: 4px 0 8px; }
+  .accordion-desc { font-size: 14px; color: #7a6f62; line-height: 1.6; padding: 10px 18px 12px 60px; font-style: italic; }
+  .skill-row { display: flex; gap: 16px; padding: 8px 18px 8px 60px; }
+  .skill-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; opacity: 0.7; }
+  .skill-name { font-family: 'Courier New', monospace; font-size: 12px; color: #ccc5ba; letter-spacing: 0.05em; margin-bottom: 3px; }
+  .skill-note { font-size: 13px; color: #5a5550; line-height: 1.5; }
+  .arch-layer-num { font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 0.15em; min-width: 28px; }
+  .arch-layer-label { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; flex: 1; }
+  .arch-footer-note { font-family: 'Courier New', monospace; font-size: 10px; color: #4a4540; letter-spacing: 0.1em; margin-top: 12px; line-height: 1.7; }
+
+  /* ROI */
+  .roi-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .roi-area { font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; flex: 1; }
+  .roi-section-label { font-family: 'Courier New', monospace; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 5px; }
+  .roi-body { font-size: 14px; line-height: 1.6; }
+  .roi-gain { font-size: 14px; line-height: 1.6; font-style: italic; padding-left: 12px; border-left-width: 2px; border-left-style: solid; margin-top: 4px; }
+  .roi-footer { font-family: 'Courier New', monospace; font-size: 10px; color: #4a4540; letter-spacing: 0.1em; margin-top: 12px; line-height: 1.7; }
+
+  /* Job Desc */
+  .jd-intro { font-size: 16px; line-height: 1.85; color: #ccc5ba; margin-bottom: 22px; }
+  .jd-box { border-radius: 4px; overflow: hidden; margin-bottom: 22px; }
+  .jd-box-header { padding: 10px 16px; }
+  .jd-box-header span { font-family: 'Courier New', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; }
+  .jd-row { display: grid; grid-template-columns: 28px 1fr; gap: 4px; padding: 10px 16px; }
+  .jd-row-num { font-family: 'Courier New', monospace; font-size: 9px; color: #4a6741; padding-top: 3px; opacity: 0.7; }
+  .jd-row-text { font-size: 14px; color: #b8b0a4; line-height: 1.65; }
+  .jd-italic { font-size: 15px; line-height: 1.8; color: #9a9088; font-style: italic; margin-bottom: 22px; }
+  .jd-success-row { display: grid; grid-template-columns: 20px 1fr; gap: 10px; padding: 10px 16px; align-items: start; }
+  .jd-check { font-size: 12px; color: #8a7fa0; padding-top: 2px; }
+  .jd-callout { border-left: 3px solid #c9a96e; padding: 14px 18px; background: #1a1a18; border-radius: 0 4px 4px 0; margin-top: 22px; }
+  .jd-callout p { font-size: 14.5px; color: #ccc5ba; line-height: 1.75; }
+
+  /* Formal Ask */
+  .ask-intro { font-size: 16px; line-height: 1.85; color: #ccc5ba; margin-bottom: 20px; }
+  .ask-box { border: 1px solid rgba(201,169,110,0.25); border-radius: 4px; padding: 22px 24px; background: rgba(201,169,110,0.03); margin-bottom: 20px; }
+  .ask-box-label { font-family: 'Courier New', monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: #c9a96e; margin-bottom: 16px; }
+  .ask-commit { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; margin-bottom: 12px; }
+  .ask-check { font-family: 'Courier New', monospace; font-size: 10px; color: #4a6741; padding-top: 2px; }
+  .ask-commit-text { font-size: 14.5px; color: #ccc5ba; line-height: 1.7; }
+  .ask-closing { border: 1px solid #2a2a28; border-left: 3px solid #c9a96e; border-radius: 0 4px 4px 0; padding: 16px 20px; background: #1a1a18; }
+  .ask-closing p { font-size: 14px; color: #7a6f62; line-height: 1.75; }
+
+  /* The Plan bullets */
+  .plan-bullet { display: grid; grid-template-columns: 20px 1fr; gap: 12px; margin-bottom: 16px; align-items: start; }
+  .plan-bullet-dot { width: 6px; height: 6px; border-radius: 50%; background: #c9a96e; margin-top: 9px; flex-shrink: 0; }
+
+  /* Workflow diagram */
+  .workflow-toggle { display: flex; gap: 10px; margin-bottom: 28px; }
+  .workflow-btn { background: none; font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; padding: 7px 16px; cursor: pointer; border-radius: 2px; transition: all 0.2s; }
+  .workflow-legend { display: flex; gap: 20px; margin-top: 16px; flex-wrap: wrap; }
+  .workflow-legend-item { display: flex; align-items: center; gap: 7px; }
+  .workflow-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .workflow-legend-label { font-family: 'Courier New', monospace; font-size: 9px; color: #5a5550; letter-spacing: 0.05em; }
+  .workflow-caption { margin-top: 16px; padding: 14px 18px; background: #1a1a18; border-radius: 4px; border: 1px solid #2a2a28; }
+  .workflow-caption p { font-family: 'Courier New', monospace; font-size: 11px; color: #5a5550; letter-spacing: 0.08em; line-height: 1.8; }
+
+  @media (max-width: 600px) {
+    #app-header, #content, #footer-nav, #footer-credit { padding-left: 20px; padding-right: 20px; }
+    #nav { padding: 0 20px; }
+    #nav button { padding: 14px 12px 12px; }
+    #app-header h1 { font-size: 20px; }
+    #content h2 { font-size: 24px; }
+    .exec-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <div>
+    <div class="eyebrow">Internal Briefing · Claude Early Access</div>
+    <h1>Claude Access: An RFP Systems Perspective</h1>
+  </div>
+  <div id="section-count"></div>
+</div>
+
+<div id="nav"></div>
+
+<div id="content">
+  <div class="section-counter" id="counter"></div>
+  <h2 id="section-title"></h2>
+  <p class="subtitle-line" id="section-subtitle"></p>
+  <div class="divider-line"></div>
+  <div id="section-body"></div>
+</div>
+
+<div id="footer-nav">
+  <button id="btn-prev">Prev</button>
+  <div id="dots"></div>
+  <button id="btn-next">Next</button>
+</div>
+
+<div id="footer-credit">
+  <p>This document was drafted with the assistance of Claude by Anthropic. All content reflects the author's own analysis and perspective. No company systems, data, or confidential information was referenced in its creation.</p>
+</div>
+
+<script>
+const M = "'Courier New', monospace";
+const S = "'Georgia', serif";
+
+const architecture = [
+  { layer:"00", label:"Foundation", description:"Organizational memory that every skill draws from as a shared knowledge base.", color:"#4a6741", skills:[
+    { name:"Brand Voice & Tone Standards", note:"Enforces consistent language, register, and style across all outputs" },
+    { name:"Boilerplate Library", note:"Org overview, team profiles, standard capability statements" },
+    { name:"Compliance & Requirements Rules", note:"Mandatory language, certifications, regulatory constraints" }
+  ]},
+  { layer:"01", label:"Intelligence", description:"Intake and analysis skills that read an opportunity before the team writes a word.", color:"#7a6f62", skills:[
+    { name:"RFP Parser", note:"Extracts requirements, deadlines, scoring weights, and evaluation criteria" },
+    { name:"Win Theme Architect", note:"Builds the strategic narrative around why us, for this client, at this moment" },
+    { name:"Competitive Context Skill", note:"Frames our differentiators against likely alternatives in the field" }
+  ]},
+  { layer:"02", label:"Drafting", description:"Section-level writing skills, purpose-built for each part of the proposal.", color:"#c9a96e", skills:[
+    { name:"Executive Summary Writer", note:"Leads with the win theme and targets the decision-maker rather than the evaluator" },
+    { name:"Technical / Programmatic Responder", note:"Maps our approach directly to stated requirements, requirement by requirement" },
+    { name:"Team & Qualifications Skill", note:"Pulls from the boilerplate library and contextualizes credentials for each opportunity" },
+    { name:"Pricing Narrative Skill", note:"Frames cost in terms of value, not line items" }
+  ]},
+  { layer:"03", label:"Quality", description:"Review and assurance skills that catch issues before anything goes out the door.", color:"#8a7fa0", skills:[
+    { name:"Compliance Checker", note:"Verifies every stated requirement has a corresponding response" },
+    { name:"Voice Consistency Reviewer", note:"Flags tonal drift, inconsistent terminology, and style violations" },
+    { name:"Evaluator Simulation", note:"Scores our response the way the client panel would and surfaces gaps before submission" }
+  ]},
+  { layer:"04", label:"Output", description:"Delivery and learning skills that close the loop on every submission.", color:"#5a7a8a", skills:[
+    { name:"Final Assembly Skill", note:"Compiles sections with consistent formatting and document structure" },
+    { name:"Client-Facing Leave-Behind", note:"Generates a concise summary version for post-submission follow-up" },
+    { name:"Win / Loss Debrief Skill", note:"Captures lessons learned and feeds them back into the Foundation layer" }
+  ]}
+];
+
+const roiItems = [
+  { area:"Time per Proposal", current:"Manual research, drafting, and compliance review spread across multiple tools", withAccess:"Structured skills handle intake parsing, section drafting, and compliance checking in sequence", gain:"Meaningful reduction in hours per submission cycle", color:"#4a6741" },
+  { area:"Output Consistency", current:"Voice, terminology, and formatting vary based on who drafted each section", withAccess:"Foundation layer enforces voice and standards across every output automatically", gain:"Uniform quality regardless of who initiates a draft", color:"#c9a96e" },
+  { area:"Rework and Review", current:"Reviewers spend significant time correcting tone, terminology, and missed requirements", withAccess:"Quality layer catches compliance gaps and voice drift before human review begins", gain:"Reviewers focus on judgment calls rather than corrections", color:"#8a7fa0" },
+  { area:"Tool Sprawl", current:"Multiple disconnected tools generate inconsistent outputs with no shared memory", withAccess:"A single governed ecosystem replaces the patchwork of individual workarounds", gain:"Reduced licensing risk and a clear governance model for AI use", color:"#5a7a8a" },
+  { area:"Compounding Value", current:"Each proposal starts from scratch with no institutional learning carried forward", withAccess:"Win/loss insights feed back into Foundation skills, improving outputs over time", gain:"The toolkit gets smarter with every submission cycle", color:"#7a6f62" }
+];
+
+const jdResponsibilities = [
+  "Design, build, and maintain RFP systems, workflows, and tooling that improve drafting speed, consistency, and cross-functional coordination",
+  "Develop and manage AI-supported tools and processes that assist with proposal assembly, content retrieval, reporting, and insight generation while maintaining high standards for clarity, accuracy, and Spring Health voice",
+  "Establish standards, frameworks, and QC mechanisms that reduce risk and improve proposal quality at scale",
+  "Enable team adoption of systems by documenting best practices and supporting consistent execution during peak volume"
+];
+
+const jdSuccess = [
+  "Reduced drafting and assembly time due to improved systems and workflows",
+  "Increased consistency, accuracy, and clarity across proposal responses",
+  "Strong adoption of proposal systems across the team",
+  "Reduced error rate of issues that should have been caught during QA/QC"
+];
+
+const execSummary = [
+  { id:"opening", label:"Background", text:"My current role sits outside the pilot criteria, but the scope of my responsibilities positions me to contribute directly to how Claude gets adopted and configured across the organization." },
+  { id:"credentials", label:"Power User Experience", text:"Building on Claude's DTC offering has produced my working understanding of what the enterprise instance will and will not support, and that perspective is directly relevant to getting the configuration right." },
+  { id:"whyclaude", label:"Three Risks", text:"Early involvement gives us the opportunity to get ahead of writing inconsistency, agent sprawl, and integration decisions before they become harder to address." },
+  { id:"theplan", label:"The Plan", text:"Inclusion in the pilot will lead to four infrastructure builds that shape how effectively Claude works for this team from day one." },
+  { id:"jobdesc", label:"Job Alignment", text:"The Systems and Intelligence Specialization scope of this role maps directly to what the pilot is designed to produce, making this a natural fit rather than an exception." },
+  { id:"formalask", label:"The Ask", text:"I am requesting early access with four specific commitments attached, structured to generate output that benefits the team and informs the broader rollout." }
+];
+
+const sections = [
+  { id:"execsummary", label:"Overview", icon:"◉", title:"Executive Summary", subtitle:"Executive Summary", type:"execsummary" },
+  { id:"opening", label:"Background", icon:"◈", title:"Role Overview", subtitle:"Background", body:`My current role restricts me from this phase of the Claude rollout, scoped for people managers and leaders. That is a reasonable starting point for a pilot, but it imposes potential risks for our team.\n\nMy new job description holds me accountable for building the AI-supported systems and workflows the proposal team depends on. Without access, I cannot execute on those responsibilities, and the team absorbs the delay.\n\nThe larger risk is one of sequencing. Our team works across nearly every function in the organization, which puts us in a position to meaningfully shape how Claude gets configured and used at a broader level. If access is granted after general rollout rather than before it, that window to identify gaps and shape the configuration closes. Other functions will establish the defaults, and we will spend time retrofitting our workflows as a result.\n\nEarly access is not about my productivity. It is about getting an alternative perspective from a power user who uses Claude in materially different ways than the power users currently in the pilot.` },
+  { id:"credentials", label:"Power User Experience", icon:"◆", title:"How I Use Claude Today", subtitle:"Threading together disparate tools, teams, and workflows to drive quality at scale", body:`Cowork will expand what the team can get done, and I see real value in that. However, I am trying to understand what is possible with the enterprise offering vs. what can be spun up in the DTC offering. My goal is to map what is possible inside the enterprise instance, help shape the configuration before it gets locked in, and establish guardrails that give the team a consistent foundation without limiting how Claude gets used across different workflows.\n\nOn my personal account, I have transformed manual tasks by converting prompts into reusable Skills.md frameworks that bring multi-step processes down from close to an hour to minutes. This has allowed me to eliminate my reliance on other LLMs like ChatGPT and replace personal software tools like Adobe entirely, consolidating my workflow within Claude.\n\nI have built workflows and skills on my personal Claude account that have meaningfully changed how I work. What I do not yet know is whether those same approaches are feasible inside the enterprise environment, or whether the connectors and configurations that make them work will be available. Getting into the pilot gives me the chance to find out and provide informed input on what would make a meaningful difference for our team.\n\nEarly access lets me test the enterprise instance in real time, so we are not figuring out what works and what does not after the setup is already locked in.` },
+  { id:"whyclaude", label:"Three Risks", icon:"◍", title:"Three Risks Worth Getting Ahead Of", subtitle:"The tools are in place. The structure is not.", body:`While using ChatGPT and Gemini, we have encountered three primary risks. This is a case for getting the right setup before these risks compound.\n\nWriting inconsistency. Without shared guardrails and tested Skills.md frameworks, output quality varies by user, voice drifts across verticals, and errors in client-facing documents go unchecked.\n\nAgent sprawl. As Claude's capabilities expand, individuals will build their own workflows without a governing structure. The organization risks the same fragmentation it has today with Custom GPTs, only at a larger scale.\n\nClaude's available connectors will determine how well it works alongside the platforms the team already uses. Those decisions are easier to get right at the start than to fix after rollout.` },
+  { id:"theplan", label:"The Plan", icon:"◇", title:"What Gets Built and How", subtitle:"Building with the infrastructure underneath the core Claude platform", body:`The team holds biweekly AI sessions to share learnings and stay aligned on tooling. In practice those sessions rarely happen consistently because the tools we have today do not help us move to first draft fast enough to make the time feel worthwhile. That is the problem early access is positioned to solve, not through Cowork's surface features, but through the infrastructure underneath the core Claude platform.\n\nFour builds are planned for the access period.\n\nClaude skill frameworks that encode the team's proposal standards and process logic, so anyone on the team gets consistent outputs regardless of how they prompt.\n\nA feasibility analysis of moving intake from a manual process with partial automation in Zapier to a reliable end-to-end workflow in Claude, reducing fragmentation and centralizing how work enters the queue.\n\nA rebuilt proposal analysis framework to accelerate our understanding of emerging market trends, win themes, and loss patterns.\n\nAn initial exploration of building a custom proposal and content management system in house via Claude, beginning with a go/no-go analysis tool that measures fit for opportunities at intake and an RFP project planner that moves approved projects from assignment into response drafting within minutes.\n\nWithin a two-week sprint, the goal is to complete the Skills.md framework and the Zapier feasibility analysis, with findings documented and ready to share with the team.\n\nNone of these are for individual productivity. All of them are infrastructure decisions that determine how effective Cowork and Claude's core features actually become for our team.` },
+  { id:"jobdesc", label:"Job Alignment", icon:"◧", title:"This Is Already Part of My Job Description", subtitle:"Restricted access creates a gap between defined responsibilities and available tools", type:"jobdesc" },
+  { id:"formalask", label:"The Ask", icon:"◉", title:"An Ask With Accountability", subtitle:"A bounded, accountable ask with specific deliverables attached", type:"formalask" }
+];
+
+let activeIdx = 0;
+let roiOpen = null;
+let archOpen = {};
+let workflowView = "now";
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function renderExecSummary() {
+  return `<p class="exec-hint">Select any section to navigate directly to it.</p>` +
+    execSummary.map((item, i) => `
+      <div class="exec-row" onclick="goTo('${item.id}')">
+        <div class="exec-row-label">
+          <span class="exec-num">${pad(i+1)}</span>
+          <span class="exec-tag">${item.label}</span>
+        </div>
+        <div class="exec-text">${item.text}</div>
+      </div>`).join('');
+}
+
+function renderBody(sec) {
+  if (!sec.body) return '';
+  const paras = sec.body.split('\n\n');
+  if (sec.id === 'theplan') {
+    return paras.map((p, i) => {
+      if (i >= 2 && i <= 5) {
+        return `<div class="plan-bullet"><div class="plan-bullet-dot"></div><p class="body-para" style="margin:0;font-size:15px">${p}</p></div>`;
+      }
+      return `<p class="body-para">${p}</p>`;
+    }).join('');
+  }
+  return paras.map(p => `<p class="body-para">${p}</p>`).join('');
+}
+
+function renderArchitecture() {
+  let html = architecture.map((layer, li) => {
+    const isOpen = !!archOpen[li];
+    let inner = '';
+    if (isOpen) {
+      inner = `<div class="accordion-body" style="border-top:1px solid ${layer.color}20">
+        <p class="accordion-desc">${layer.description}</p>
+        ${layer.skills.map((sk, si) => `
+          <div class="skill-row" style="${si>0?'border-top:1px solid #1a1a18':''}">
+            <div class="skill-dot" style="background:${layer.color}"></div>
+            <div>
+              <div class="skill-name">${sk.name}</div>
+              <div class="skill-note">${sk.note}</div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    }
+    return `<div class="accordion" style="border:1px solid ${layer.color}30">
+      <div class="accordion-header" style="background:${isOpen?layer.color+'12':'transparent'}" onclick="toggleArch(${li})">
+        <span class="arch-layer-num" style="color:${layer.color}">L${layer.layer}</span>
+        <span class="arch-layer-label" style="color:${layer.color}">${layer.label}</span>
+        <span class="accordion-chevron" style="transform:${isOpen?'rotate(180deg)':'rotate(0)'}">▾</span>
+      </div>
+      ${inner}
+    </div>`;
+  }).join('');
+  html += `<p class="arch-footer-note">Each layer builds on the one below. Foundation skills run underneath everything and stay invisible to users. Output skills are what the team sees and touches directly.</p>`;
+  return html;
+}
+
+function renderROI() {
+  let html = roiItems.map((item, i) => {
+    const isOpen = roiOpen === i;
+    let inner = '';
+    if (isOpen) {
+      inner = `<div style="border-top:1px solid ${item.color}20;padding:16px 18px 18px 42px">
+        <div style="margin-bottom:14px">
+          <div class="roi-section-label" style="color:#4a4540">Today</div>
+          <div class="roi-body" style="color:#7a6f62">${item.current}</div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div class="roi-section-label" style="color:${item.color}">With Access</div>
+          <div class="roi-body" style="color:#ccc5ba">${item.withAccess}</div>
+        </div>
+        <div class="roi-gain" style="color:${item.color};border-left-color:${item.color}">${item.gain}</div>
+      </div>`;
+    }
+    return `<div class="accordion" style="border:1px solid ${item.color}30">
+      <div class="accordion-header" style="background:${isOpen?item.color+'12':'transparent'}" onclick="toggleROI(${i})">
+        <div class="roi-dot" style="background:${item.color}"></div>
+        <span class="roi-area" style="color:${item.color}">${item.area}</span>
+        <span class="accordion-chevron" style="transform:${isOpen?'rotate(180deg)':'rotate(0)'}">▾</span>
+      </div>
+      ${inner}
+    </div>`;
+  }).join('');
+  html += `<p class="roi-footer">Click each area to expand. The Compounding Value row is the one that grows over time as the Foundation layer absorbs lessons from each submission cycle.</p>`;
+  return html;
+}
+
+function renderJobDesc() {
+  return `
+    <p class="jd-intro">Under the <strong style="color:#f0ebe3">Systems and Intelligence Specialization</strong> section of my role as RFP Systems and Intelligence Lead, every core responsibility points directly at AI-supported systems work. Each one requires being inside the tool, not adjacent to it.</p>
+    <div class="jd-box" style="border:1px solid rgba(74,103,65,0.25)">
+      <div class="jd-box-header" style="background:rgba(74,103,65,0.09);border-bottom:1px solid rgba(74,103,65,0.19)">
+        <span style="color:#4a6741">Based on My Current Role Scope · Systems and Intelligence Specialization</span>
+      </div>
+      ${jdResponsibilities.map((r,i) => `
+        <div class="jd-row" style="${i>0?'border-top:1px solid #1e1e1c':''}">
+          <span class="jd-row-num">0${i+1}</span>
+          <span class="jd-row-text">${r}</span>
+        </div>`).join('')}
+    </div>
+    <p class="jd-italic">Every one of those responsibilities requires direct access to Claude, with the ability to build, test, iterate, and refine inside the tool itself.</p>
+    <div class="jd-box" style="border:1px solid rgba(138,127,160,0.25)">
+      <div class="jd-box-header" style="background:rgba(138,127,160,0.09);border-bottom:1px solid rgba(138,127,160,0.19)">
+        <span style="color:#8a7fa0">What Success Looks Like · Based on Current Role Scope</span>
+      </div>
+      ${jdSuccess.map((s,i) => `
+        <div class="jd-success-row" style="${i>0?'border-top:1px solid #1e1e1c':''}">
+          <span class="jd-check">✓</span>
+          <span class="jd-row-text">${s}</span>
+        </div>`).join('')}
+    </div>
+    <div class="jd-callout">
+      <p>The scope of this role and the access model are currently pointed in different directions. Expedited access removes this conflict.</p>
+    </div>`;
+}
+
+function renderFormalAsk() {
+  const commits = [
+    "Deliver at least two documented, team-ready Claude workflows or feasibility findings within the access period",
+    "Provide structured feedback on what the enterprise instance can and cannot support relative to how the team works",
+    "Document what Claude improves and where gaps remain, usable as input for the broader organizational rollout",
+    "Begin building the tooling and infrastructure to support successful adoption on day one of the full rollout"
+  ];
+  return `
+    <p class="ask-intro">I am requesting early access to Claude as a power user due to alignment with the responsibilities of my role. The goal is not open-ended exploration. It is to conduct specific testing on what is possible inside the enterprise instance, inform the configuration before it locks in, and begin building the tooling and infrastructure to support successful adoption on day one of the full rollout.</p>
+    <div class="ask-box">
+      <div class="ask-box-label">In Exchange, I Commit To</div>
+      ${commits.map(c => `<div class="ask-commit"><span class="ask-check">✓</span><span class="ask-commit-text">${c}</span></div>`).join('')}
+    </div>
+    <div class="ask-closing"><p>What gets built and learned during this period benefits the team well beyond the pilot.</p></div>`;
+}
+
+function renderWorkflow() {
+  const btnStyle = (id) => `border:1px solid ${workflowView===id?'#c9a96e':'#2a2a28'};color:${workflowView===id?'#c9a96e':'#5a5550'}`;
+  const nowSVG = `<svg viewBox="0 0 680 248" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#3a3a38"/></marker>
+      <marker id="arr-green" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4a6741"/></marker>
+    </defs>
+    <rect x="20" y="188" width="640" height="46" rx="4" fill="#4a674118" stroke="#4a6741" stroke-width="1"/>
+    <text x="340" y="216" text-anchor="middle" font-family="Courier New" font-size="10" fill="#4a6741" letter-spacing="2">L00 · FOUNDATION · SHARED KNOWLEDGE BASE</text>
+    <rect x="20" y="62" width="92" height="44" rx="4" fill="#2a2a28" stroke="#3a3a38" stroke-width="1"/>
+    <text x="66" y="81" text-anchor="middle" font-family="Courier New" font-size="9" fill="#7a7068" letter-spacing="1">RFP INPUT</text>
+    <text x="66" y="96" text-anchor="middle" font-family="Georgia" font-size="10" fill="#7a7068" opacity="0.6">Document</text>
+    <line x1="66" y1="106" x2="66" y2="186" stroke="#3a3a38" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+    <rect x="134" y="62" width="108" height="44" rx="4" fill="#7a6f6218" stroke="#7a6f62" stroke-width="1"/>
+    <text x="188" y="81" text-anchor="middle" font-family="Courier New" font-size="9" fill="#7a6f62" letter-spacing="1">INTELLIGENCE</text>
+    <text x="188" y="96" text-anchor="middle" font-family="Georgia" font-size="10" fill="#7a6f62" opacity="0.6">L01</text>
+    <line x1="188" y1="106" x2="188" y2="186" stroke="#7a6f62" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+    <rect x="264" y="62" width="100" height="44" rx="4" fill="#c9a96e18" stroke="#c9a96e" stroke-width="1"/>
+    <text x="314" y="81" text-anchor="middle" font-family="Courier New" font-size="9" fill="#c9a96e" letter-spacing="1">DRAFTING</text>
+    <text x="314" y="96" text-anchor="middle" font-family="Georgia" font-size="10" fill="#c9a96e" opacity="0.6">L02</text>
+    <line x1="314" y1="106" x2="314" y2="186" stroke="#c9a96e" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+    <rect x="386" y="62" width="96" height="44" rx="4" fill="#8a7fa018" stroke="#8a7fa0" stroke-width="1"/>
+    <text x="434" y="81" text-anchor="middle" font-family="Courier New" font-size="9" fill="#8a7fa0" letter-spacing="1">QUALITY</text>
+    <text x="434" y="96" text-anchor="middle" font-family="Georgia" font-size="10" fill="#8a7fa0" opacity="0.6">L03</text>
+    <line x1="434" y1="106" x2="434" y2="186" stroke="#8a7fa0" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+    <rect x="504" y="62" width="96" height="44" rx="4" fill="#5a7a8a18" stroke="#5a7a8a" stroke-width="1"/>
+    <text x="552" y="81" text-anchor="middle" font-family="Courier New" font-size="9" fill="#5a7a8a" letter-spacing="1">OUTPUT</text>
+    <text x="552" y="96" text-anchor="middle" font-family="Georgia" font-size="10" fill="#5a7a8a" opacity="0.6">L04</text>
+    <line x1="552" y1="106" x2="552" y2="186" stroke="#5a7a8a" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
+    <line x1="113" y1="84" x2="132" y2="84" stroke="#3a3a38" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="243" y1="84" x2="262" y2="84" stroke="#3a3a38" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="365" y1="84" x2="384" y2="84" stroke="#3a3a38" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="483" y1="84" x2="502" y2="84" stroke="#3a3a38" stroke-width="1.5" marker-end="url(#arr)"/>
+    <path d="M 600 62 Q 648 30 648 15 Q 648 4 340 4 Q 30 4 30 15 Q 30 26 30 188" fill="none" stroke="#4a6741" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr-green)" opacity="0.7"/>
+    <text x="340" y="12" text-anchor="middle" font-family="Courier New" font-size="8" fill="#4a6741" letter-spacing="1" opacity="0.8">LESSONS FEED BACK</text>
+  </svg>
+  <div class="workflow-legend">
+    <div class="workflow-legend-item"><div class="workflow-legend-dot" style="background:#7a6f62"></div><span class="workflow-legend-label">Intelligence · Parser, Win Theme, Competitive Context</span></div>
+    <div class="workflow-legend-item"><div class="workflow-legend-dot" style="background:#c9a96e"></div><span class="workflow-legend-label">Drafting · 4 section-level writing skills</span></div>
+    <div class="workflow-legend-item"><div class="workflow-legend-dot" style="background:#8a7fa0"></div><span class="workflow-legend-label">Quality · Compliance, Voice, Evaluator Simulation</span></div>
+    <div class="workflow-legend-item"><div class="workflow-legend-dot" style="background:#5a7a8a"></div><span class="workflow-legend-label">Output · Assembly, Leave-Behind, Debrief</span></div>
+  </div>`;
+
+  const futureSVG = `<svg viewBox="0 0 680 370" style="width:100%;display:block" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#c9a96e"/></marker>
+      <marker id="arr2g" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4a6741"/></marker>
+      <marker id="arr2w" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#5a5550"/></marker>
+    </defs>
+    <rect x="225" y="18" width="180" height="44" rx="4" fill="#c9a96e22" stroke="#c9a96e" stroke-width="1.5"/>
+    <text x="315" y="37" text-anchor="middle" font-family="Courier New" font-size="10" fill="#c9a96e" letter-spacing="1.5">ORCHESTRATOR</text>
+    <text x="315" y="52" text-anchor="middle" font-family="Courier New" font-size="8" fill="#c9a96e" opacity="0.6" letter-spacing="1">CLAUDE · MASTER AGENT</text>
+    <rect x="490" y="18" width="160" height="44" rx="4" fill="#2a2a2a" stroke="#3a3a38" stroke-width="1" stroke-dasharray="4,2"/>
+    <text x="570" y="37" text-anchor="middle" font-family="Courier New" font-size="9" fill="#5a5550" letter-spacing="1">HUMAN REVIEW</text>
+    <text x="570" y="52" text-anchor="middle" font-family="Courier New" font-size="8" fill="#3a3a38" letter-spacing="1">APPROVAL GATE</text>
+    <line x1="405" y1="40" x2="488" y2="40" stroke="#5a5550" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr2w)"/>
+    <rect x="18" y="138" width="104" height="42" rx="3" fill="#7a6f6218" stroke="#7a6f62" stroke-width="1"/>
+    <text x="70" y="156" text-anchor="middle" font-family="Courier New" font-size="8" fill="#7a6f62" letter-spacing="1">RFP PARSER</text>
+    <text x="70" y="171" text-anchor="middle" font-family="Georgia" font-size="9" fill="#7a6f62" opacity="0.6">Intake Agent</text>
+    <line x1="315" y1="62" x2="70" y2="136" stroke="#c9a96e" stroke-width="1" opacity="0.35" marker-end="url(#arr2)"/>
+    <rect x="138" y="138" width="94" height="42" rx="3" fill="#7a6f6218" stroke="#7a6f62" stroke-width="1"/>
+    <text x="185" y="156" text-anchor="middle" font-family="Courier New" font-size="8" fill="#7a6f62" letter-spacing="1">RESEARCH</text>
+    <text x="185" y="171" text-anchor="middle" font-family="Georgia" font-size="9" fill="#7a6f62" opacity="0.6">Intel Agent</text>
+    <line x1="315" y1="62" x2="185" y2="136" stroke="#c9a96e" stroke-width="1" opacity="0.35" marker-end="url(#arr2)"/>
+    <rect x="248" y="138" width="104" height="42" rx="3" fill="#c9a96e18" stroke="#c9a96e" stroke-width="1"/>
+    <text x="300" y="156" text-anchor="middle" font-family="Courier New" font-size="8" fill="#c9a96e" letter-spacing="1">WIN THEME</text>
+    <text x="300" y="171" text-anchor="middle" font-family="Georgia" font-size="9" fill="#c9a96e" opacity="0.6">Strategy Agent</text>
+    <line x1="315" y1="62" x2="300" y2="136" stroke="#c9a96e" stroke-width="1" opacity="0.35" marker-end="url(#arr2)"/>
+    <rect x="368" y="138" width="94" height="42" rx="3" fill="#8a7fa018" stroke="#8a7fa0" stroke-width="1"/>
+    <text x="415" y="156" text-anchor="middle" font-family="Courier New" font-size="8" fill="#8a7fa0" letter-spacing="1">QA SUITE</text>
+    <text x="415" y="171" text-anchor="middle" font-family="Georgia" font-size="9" fill="#8a7fa0" opacity="0.6">Review Agent</text>
+    <line x1="315" y1="62" x2="415" y2="136" stroke="#c9a96e" stroke-width="1" opacity="0.35" marker-end="url(#arr2)"/>
+    <rect x="478" y="138" width="94" height="42" rx="3" fill="#5a7a8a18" stroke="#5a7a8a" stroke-width="1"/>
+    <text x="525" y="156" text-anchor="middle" font-family="Courier New" font-size="8" fill="#5a7a8a" letter-spacing="1">ASSEMBLY</text>
+    <text x="525" y="171" text-anchor="middle" font-family="Georgia" font-size="9" fill="#5a7a8a" opacity="0.6">Output Agent</text>
+    <line x1="315" y1="62" x2="525" y2="136" stroke="#c9a96e" stroke-width="1" opacity="0.35" marker-end="url(#arr2)"/>
+    <rect x="138" y="204" width="224" height="84" rx="3" fill="#c9a96e10" stroke="#c9a96e" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="250" y="220" text-anchor="middle" font-family="Courier New" font-size="8" fill="#c9a96e" opacity="0.8" letter-spacing="1">DRAFTING SUITE · 4 AGENTS</text>
+    <rect x="148" y="227" width="88" height="22" rx="2" fill="#c9a96e18" stroke="#c9a96e44" stroke-width="0.75"/>
+    <text x="192" y="241" text-anchor="middle" font-family="Courier New" font-size="7.5" fill="#c9a96e" opacity="0.7">Exec Summary</text>
+    <rect x="248" y="227" width="88" height="22" rx="2" fill="#c9a96e18" stroke="#c9a96e44" stroke-width="0.75"/>
+    <text x="292" y="241" text-anchor="middle" font-family="Courier New" font-size="7.5" fill="#c9a96e" opacity="0.7">Tech Response</text>
+    <rect x="148" y="254" width="88" height="22" rx="2" fill="#c9a96e18" stroke="#c9a96e44" stroke-width="0.75"/>
+    <text x="192" y="268" text-anchor="middle" font-family="Courier New" font-size="7.5" fill="#c9a96e" opacity="0.7">Team &amp; Quals</text>
+    <rect x="248" y="254" width="88" height="22" rx="2" fill="#c9a96e18" stroke="#c9a96e44" stroke-width="0.75"/>
+    <text x="292" y="268" text-anchor="middle" font-family="Courier New" font-size="7.5" fill="#c9a96e" opacity="0.7">Pricing Narrative</text>
+    <line x1="300" y1="180" x2="250" y2="202" stroke="#c9a96e" stroke-width="1" stroke-dasharray="2,2" opacity="0.5" marker-end="url(#arr2)"/>
+    <rect x="18" y="316" width="644" height="42" rx="4" fill="#4a674118" stroke="#4a6741" stroke-width="1"/>
+    <text x="340" y="342" text-anchor="middle" font-family="Courier New" font-size="10" fill="#4a6741" letter-spacing="2">L00 · FOUNDATION · SHARED KNOWLEDGE BASE</text>
+    <line x1="70" y1="180" x2="70" y2="314" stroke="#4a6741" stroke-width="1" stroke-dasharray="3,3" opacity="0.3" marker-end="url(#arr2g)"/>
+    <line x1="185" y1="180" x2="185" y2="314" stroke="#4a6741" stroke-width="1" stroke-dasharray="3,3" opacity="0.3" marker-end="url(#arr2g)"/>
+    <line x1="300" y1="180" x2="300" y2="314" stroke="#4a6741" stroke-width="1" stroke-dasharray="3,3" opacity="0.3" marker-end="url(#arr2g)"/>
+    <line x1="415" y1="180" x2="415" y2="314" stroke="#4a6741" stroke-width="1" stroke-dasharray="3,3" opacity="0.3" marker-end="url(#arr2g)"/>
+    <line x1="525" y1="180" x2="525" y2="314" stroke="#4a6741" stroke-width="1" stroke-dasharray="3,3" opacity="0.3" marker-end="url(#arr2g)"/>
+    <path d="M 662 316 Q 668 290 668 40 Q 668 18 650 18 Q 630 18 620 18" fill="none" stroke="#4a6741" stroke-width="1" stroke-dasharray="3,3" opacity="0.5" marker-end="url(#arr2g)"/>
+    <text x="671" y="180" font-family="Courier New" font-size="7.5" fill="#4a6741" opacity="0.6" letter-spacing="1" transform="rotate(90,671,180)">LEARNING LOOP</text>
+  </svg>
+  <div class="workflow-caption"><p>The orchestrator reads the RFP, assigns tasks to specialist agents in parallel, routes drafts through QA, and holds the result for human approval before final assembly. The Foundation layer runs underneath every agent. The learning loop feeds each submission back into the shared knowledge base automatically.</p></div>`;
+
+  return `
+    <div class="workflow-toggle">
+      <button class="workflow-btn" style="${btnStyle('now')}" onclick="setWorkflowView('now')">Skill Workflow</button>
+      <button class="workflow-btn" style="${btnStyle('future')}" onclick="setWorkflowView('future')">Multi-Agent Future</button>
+    </div>
+    ${workflowView === 'now' ? nowSVG : futureSVG}`;
+}
+
+function renderSection() {
+  const sec = sections[activeIdx];
+  document.getElementById('counter').textContent = `${pad(activeIdx+1)} / ${pad(sections.length)}`;
+  document.getElementById('section-title').textContent = sec.title;
+  document.getElementById('section-subtitle').textContent = sec.subtitle;
+
+  let html = '';
+  if (sec.type === 'execsummary') html = renderExecSummary();
+  else if (sec.type === 'jobdesc') html = renderJobDesc();
+  else if (sec.type === 'formalask') html = renderFormalAsk();
+  else if (sec.type === 'architecture') html = renderArchitecture();
+  else if (sec.type === 'roi') html = renderROI();
+  else if (sec.type === 'workflow') html = renderWorkflow();
+  else html = renderBody(sec);
+
+  document.getElementById('section-body').innerHTML = html;
+
+  // Update nav
+  document.querySelectorAll('#nav button').forEach((btn, i) => {
+    btn.classList.toggle('active', i === activeIdx);
+  });
+
+  // Update dots
+  document.querySelectorAll('.dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === activeIdx);
+  });
+
+  // Prev/Next
+  document.getElementById('btn-prev').disabled = activeIdx === 0;
+  document.getElementById('btn-next').disabled = activeIdx === sections.length - 1;
+}
+
+function goTo(id) {
+  const idx = sections.findIndex(s => s.id === id);
+  if (idx >= 0) { activeIdx = idx; renderSection(); }
+}
+
+function toggleArch(i) {
+  archOpen[i] = !archOpen[i];
+  renderSection();
+}
+
+function toggleROI(i) {
+  roiOpen = roiOpen === i ? null : i;
+  renderSection();
+}
+
+function setWorkflowView(v) {
+  workflowView = v;
+  renderSection();
+}
+
+// Build nav
+const nav = document.getElementById('nav');
+sections.forEach((sec, i) => {
+  const btn = document.createElement('button');
+  btn.textContent = `${sec.icon} ${sec.label}`;
+  btn.onclick = () => { activeIdx = i; renderSection(); };
+  nav.appendChild(btn);
+});
+
+// Build dots
+const dotsEl = document.getElementById('dots');
+sections.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot';
+  d.onclick = () => { activeIdx = i; renderSection(); };
+  dotsEl.appendChild(d);
+});
+
+// Prev/Next
+document.getElementById('btn-prev').onclick = () => { if (activeIdx > 0) { activeIdx--; renderSection(); } };
+document.getElementById('btn-next').onclick = () => { if (activeIdx < sections.length-1) { activeIdx++; renderSection(); } };
+
+// Section count
+document.getElementById('section-count').textContent = `${sections.length} SECTIONS`;
+
+renderSection();
+</script>
+</body>
+</html>
